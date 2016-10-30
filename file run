@@ -1,0 +1,71 @@
+setwd("/Users/admin/Applications/R Studio Working/test/")
+# Merge the training sets
+training = read.csv("UCI HAR Dataset/train/X_train.txt", sep="", header=FALSE)
+training[,562] = read.csv("UCI HAR Dataset/train/Y_train.txt", sep="", header=FALSE)
+training[,563] = read.csv("UCI HAR Dataset/train/subject_train.txt", sep="", header=FALSE)
+
+
+# Merge the testing sets
+testing = read.csv("UCI HAR Dataset/test/X_test.txt", sep="", header=FALSE)
+testing[,562] = read.csv("UCI HAR Dataset/test/Y_test.txt", sep="", header=FALSE)
+testing[,563] = read.csv("UCI HAR Dataset/test/subject_test.txt", sep="", header=FALSE)
+
+
+# Add activity labels
+activityLabels = read.csv("UCI HAR Dataset/activity_labels.txt", sep="", header=FALSE)
+
+
+
+# Read, replace and add feature names
+features = read.csv("UCI HAR Dataset/features.txt", sep="", header=FALSE)
+features[,2] = gsub('-mean', 'Mean', features[,2])
+features[,2] = gsub('-std', 'Std', features[,2])
+features[,2] = gsub('[-()]', '', features[,2])
+
+
+# Merge sets
+Merged_Set = rbind(training, testing)
+
+
+
+# Isolate mean and std. dev.
+MS_cols <- grep(".*Mean.*|.*Std.*", features[,2])
+
+# Eliminate irrelevant columns from features table
+features <- features[MS_cols,]
+
+# Append subject and activity
+MS_cols <- c(MS_cols, 562, 563)
+
+
+# Eliminate irrelevant columns from Merged_Set
+Merged_Set <- Merged_Set[,MS_cols]
+
+# Append activity and subject to Merged_Set
+colnames(Merged_Set) <- c(features$V2, "Activity", "Subject")
+
+# Change case of column names
+colnames(Merged_Set) <- tolower(colnames(Merged_Set))
+
+
+# Create tidy set
+currentActivity = 1
+for (currentActivityLabel in activityLabels$V2) {
+  Merged_Set$activity <- gsub(currentActivity, currentActivityLabel, Merged_Set$activity)
+  currentActivity <- currentActivity + 1
+}
+
+
+Merged_Set$activity <- as.factor(Merged_Set$activity)
+Merged_Set$subject <- as.factor(Merged_Set$subject)
+
+
+# Name tidy set
+New_Tidy = aggregate(Merged_Set, by=list(activity = Merged_Set$activity, subject=Merged_Set$subject), mean)
+
+# Eliminate columns that produce no mean
+New_Tidy[,90] = NULL
+New_Tidy[,89] = NULL
+
+# Write New_Tidy
+write.table(New_Tidy, "New_Tidy.txt", sep="\t", row.names=FALSE)
